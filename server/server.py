@@ -11,10 +11,10 @@ from typing import List, Optional
 import torch
 import uvicorn
 
-from scheduler import Scheduler
-from executor import Executor
-from telemetry import TelemetryCollector
-from models.simple_model import create_model
+from server.scheduler import Scheduler
+from server.executor import Executor
+from server.telemetry import TelemetryCollector
+from server.models.simple_model import create_model
 
 
 # Request/Response models
@@ -102,7 +102,7 @@ async def health_check():
     return info
 
 
-@app.post("/predict", response_model=InferenceResponse)
+@app.post("/predict", response_model=InferenceResponse, response_model_exclude_none=True)
 async def predict(request: InferenceRequest):
     """
     Main inference endpoint.
