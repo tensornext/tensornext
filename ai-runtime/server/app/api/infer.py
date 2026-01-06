@@ -30,7 +30,7 @@ async def infer(request: InferenceRequest) -> InferenceResponse:
     
     acquired = False
     try:
-        await asyncio.wait_for(concurrency_semaphore.acquire(), timeout=0.0)
+        await asyncio.wait_for(concurrency_semaphore.acquire(), timeout=0.001)
         acquired = True
     except asyncio.TimeoutError:
         logger.warning(f"Request {request_id} rejected: concurrency limit exceeded")
