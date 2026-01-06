@@ -1,6 +1,6 @@
 import logging
 from typing import Optional
-from gateway.app.core.registry import NodeRegistry, NodeInfo
+from gateway.app.core.registry import NodeRegistry, NodeInfo, registry
 
 logger = logging.getLogger(__name__)
 
