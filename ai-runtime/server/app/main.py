@@ -37,15 +37,14 @@ async def add_request_id(request: Request, call_next: Callable[[Request], Awaita
 @app.on_event("startup")
 async def startup_event() -> None:
     logger.info("Starting AI Runtime Server")
-    from server.app.models.loader import ModelLoader
-    loader = ModelLoader()
-    loader.load()
-    infer.model_loader = loader
-    infer.initialize_concurrency_limit()
+    from server.app.core.pipeline import pipeline
+    await pipeline.initialize()
     logger.info("Server startup complete")
 
 
 @app.on_event("shutdown")
 async def shutdown_event() -> None:
     logger.info("Shutting down AI Runtime Server")
+    from server.app.core.pipeline import pipeline
+    await pipeline.shutdown()
 

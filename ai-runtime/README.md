@@ -52,6 +52,18 @@ Copy `.env.example` to `.env` and configure as needed.
 
 Step-1 provides a hardened foundation with API contract locking, safety mechanisms, and comprehensive documentation.
 
+## Step-2 Scaling
+
+Step-2 introduces request batching, multi-GPU execution (single node), and GPU-aware scheduling to increase throughput and concurrency.
+
+### Features
+
+- **Request Batching:** Dynamic batching with configurable batch size and latency thresholds
+- **Multi-GPU Support:** Automatic detection and utilization of all available GPUs (single node)
+- **GPU-Aware Scheduling:** Intelligent batch assignment to available GPU workers
+- **Backpressure:** HTTP 429 returned when request queue is full
+- **Mock-GPU Mode:** CI-friendly mode with 2 mock GPUs (no hardware required)
+
 ### Running Mock Inference (No GPU Required)
 
 ```bash
@@ -65,29 +77,48 @@ Or using the Makefile:
 USE_MOCK_MODEL=true make server
 ```
 
+In mock mode, the server simulates 2 GPUs for testing batching and scheduling behavior.
+
 ### Running Real GPU Inference
 
 ```bash
 uvicorn server.app.main:app --host 0.0.0.0 --port 8000
 ```
 
-The server will detect available GPUs and log warnings if multiple GPUs are present (Step-1 assumes single-GPU usage).
+The server automatically detects all available GPUs and creates one worker per GPU. Each GPU runs its own model instance.
 
 ### Configuration
 
 Environment variables (set in `.env` or export):
 
+**Step-1 Variables:**
 - `USE_MOCK_MODEL`: Enable mock mode (no GPU required)
-- `MAX_CONCURRENT_REQUESTS`: Maximum concurrent inference requests (default: 2)
+- `MAX_CONCURRENT_REQUESTS`: Legacy setting (Step-2 uses MAX_IN_FLIGHT_REQUESTS)
 - `LOG_LEVEL`: Logging level (default: INFO)
 - `PORT`: Server port (default: 8000)
 - `HOST`: Server host (default: 0.0.0.0)
+
+**Step-2 Variables:**
+- `BATCH_MAX_SIZE`: Maximum requests per batch (default: 8)
+- `BATCH_MAX_LATENCY_MS`: Maximum time to wait before flushing a partial batch (default: 50)
+- `MAX_IN_FLIGHT_REQUESTS`: Maximum requests in the queue before backpressure (default: 100)
+
+### Architecture
+
+Step-2 implements a pipeline architecture:
+
+1. **Request Queue:** Bounded async queue that enqueues incoming API requests
+2. **Dynamic Batcher:** Collects requests into batches based on size and latency thresholds
+3. **Scheduler:** Assigns batches to available GPU workers (no oversubscription)
+4. **GPU Workers:** One worker per GPU, each with its own model instance
+5. **Backpressure:** Queue full condition propagates to API as HTTP 429
 
 ### API Contract
 
 - **Version:** All requests/responses include `api_version: "v1"`
 - **Strict Validation:** Unknown fields are rejected
-- **Backpressure:** HTTP 429 returned when concurrency limit exceeded
+- **Backpressure:** HTTP 429 returned when request queue is full
+- **Compatibility:** Step-2 maintains full backward compatibility with Step-1 client API
 
 ### Documentation
 
@@ -97,9 +128,10 @@ Environment variables (set in `.env` or export):
 
 ## CI/CD
 
-GitHub Actions validates Step-1 end-to-end on every push and PR:
+GitHub Actions validates Step-1 and Step-2 end-to-end on every push and PR:
 - Server boots in mock mode (no GPU required)
 - Health and inference endpoints are tested
 - Client SDK integration is verified
 - Shared schema compatibility is checked
+- Batching and multi-GPU scheduling are tested with mock model
 

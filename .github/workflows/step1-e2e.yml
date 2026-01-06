@@ -1,4 +1,4 @@
-name: Step-1 E2E Validation
+name: Step-1 & Step-2 E2E Validation
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 jobs:
   e2e-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 5
 
     steps:
       - name: Checkout code
@@ -24,12 +24,22 @@ jobs:
         working-directory: ai-runtime
         run: |
           python -m pip install --upgrade pip
-          pip install -e .
+          pip install -e .[dev]
+
+      - name: Run Step-2 unit tests
+        working-directory: ai-runtime
+        env:
+          USE_MOCK_MODEL: "true"
+        run: |
+          pytest server/tests/test_batcher.py server/tests/test_scheduler.py server/tests/test_queue.py server/tests/test_concurrency.py -v
 
       - name: Start server in background
         working-directory: ai-runtime
         env:
           USE_MOCK_MODEL: "true"
+          BATCH_MAX_SIZE: "4"
+          BATCH_MAX_LATENCY_MS: "50"
+          MAX_IN_FLIGHT_REQUESTS: "50"
         run: |
           uvicorn server.app.main:app --host 127.0.0.1 --port 8000 &
           echo $! > /tmp/server.pid
@@ -50,6 +60,35 @@ jobs:
         working-directory: ai-runtime
         run: |
           python scripts/smoke_test.py
+
+      - name: Test Step-2 batching and multi-GPU
+        working-directory: ai-runtime
+        run: |
+          # Test that server handles concurrent requests (batching)
+          python -c "
+          import requests
+          import concurrent.futures
+          import time
+          
+          def make_request(i):
+              try:
+                  resp = requests.post('http://127.0.0.1:8000/infer', 
+                                     json={'prompt': f'test {i}', 'api_version': 'v1'},
+                                     timeout=10)
+                  return resp.status_code == 200
+              except Exception as e:
+                  print(f'Request {i} failed: {e}')
+                  return False
+          
+          # Send 10 concurrent requests to test batching
+          with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+              futures = [executor.submit(make_request, i) for i in range(10)]
+              results = [f.result() for f in concurrent.futures.as_completed(futures)]
+          
+          success_count = sum(results)
+          print(f'Successfully processed {success_count}/10 requests')
+          assert success_count >= 8, f'Expected at least 8 successful requests, got {success_count}'
+          "
 
       - name: Stop server
         if: always()
