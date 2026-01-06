@@ -32,14 +32,54 @@ This PoC consists of:
 
 ### Server (Ubuntu)
 
+**Quick Setup (Recommended):**
+
 1. Install Python 3.11+ and CUDA toolkit (if using GPU)
 
-2. Install dependencies:
+2. Install `python3-venv` (if not already installed):
+```bash
+sudo apt install python3.12-venv
+```
+
+3. Run the setup script:
+```bash
+./setup.sh
+```
+
+The script will automatically:
+- Create a virtual environment
+- Install all dependencies
+- Install the package in editable mode (if `ai-runtime/` exists)
+- Verify CUDA availability
+
+**Manual Setup:**
+
+1. Install Python 3.11+ and CUDA toolkit (if using GPU)
+
+2. Install `python3-venv` (if not already installed):
+```bash
+sudo apt install python3.12-venv
+```
+
+3. Create and activate a virtual environment:
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+4. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Verify CUDA availability (optional):
+5. (Optional) Install the package in editable mode:
+```bash
+cd ai-runtime
+pip install -e .
+cd ..
+```
+
+6. Verify CUDA availability (optional):
 ```bash
 python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
 ```
@@ -48,7 +88,13 @@ python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
 
 1. Install Python 3.11+
 
-2. Install dependencies:
+2. Create and activate a virtual environment:
+```bash
+python -m venv venv
+venv\Scripts\activate
+```
+
+3. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
@@ -59,14 +105,25 @@ pip install -r requirements.txt
 
 On the Ubuntu machine:
 
+**Make sure the virtual environment is activated first:**
+```bash
+source venv/bin/activate
+```
+
+**Option 1: Run the server script directly (recommended):**
 ```bash
 cd server
 python server.py
 ```
 
+**Option 2: Use uvicorn directly:**
+```bash
+uvicorn server.server:app --host 0.0.0.0 --port 8000
+```
+
 The server will start on `0.0.0.0:8000` (accessible from LAN).
 
-**Note**: For localhost-only access, modify `server.py` to use `host="127.0.0.1"`.
+**Note**: For localhost-only access, modify `server.py` to use `host="127.0.0.1"` or use `--host 127.0.0.1` with uvicorn.
 
 ### Running the Client
 
