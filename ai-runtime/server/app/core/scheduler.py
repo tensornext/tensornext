@@ -44,6 +44,8 @@ class Scheduler:
                     )
                 except asyncio.TimeoutError:
                     continue
+                except asyncio.CancelledError:
+                    break
                 worker = await self._find_available_worker()
                 if worker is None:
                     logger.warning("No available worker, requeuing batch")
@@ -52,6 +54,8 @@ class Scheduler:
                     continue
                 await worker.get_input_queue().put(batch)
                 logger.debug(f"Batch scheduled to worker {worker.worker_id}")
+            except asyncio.CancelledError:
+                break
             except Exception as e:
                 logger.error(f"Scheduler error: {e}", exc_info=True)
 

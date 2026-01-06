@@ -65,9 +65,13 @@ class GPUWorker:
                     )
                 except asyncio.TimeoutError:
                     continue
+                except asyncio.CancelledError:
+                    break
                 self._available = False
                 await self._process_batch(batch)
                 self._available = True
+            except asyncio.CancelledError:
+                break
             except Exception as e:
                 logger.error(f"Worker {self._worker_id} error: {e}", exc_info=True)
                 self._available = True

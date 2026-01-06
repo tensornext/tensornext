@@ -68,6 +68,8 @@ class DynamicBatcher:
                         )
                     except asyncio.TimeoutError:
                         continue
+                    except asyncio.CancelledError:
+                        break
                 else:
                     try:
                         queued = await asyncio.wait_for(
@@ -78,9 +80,13 @@ class DynamicBatcher:
                     except asyncio.TimeoutError:
                         await self._flush_batch()
                         continue
+                    except asyncio.CancelledError:
+                        break
 
                 if self._current_batch.size() >= self._max_batch_size:
                     await self._flush_batch()
+            except asyncio.CancelledError:
+                break
             except Exception as e:
                 logger.error(f"Batcher error: {e}", exc_info=True)
                 if self._current_batch and self._current_batch.size() > 0:

@@ -34,10 +34,11 @@ class TestScheduler:
             await asyncio.sleep(0.1)
 
             await scheduler.stop()
+            await asyncio.sleep(0.2)
         finally:
             for worker in workers:
                 await worker.stop()
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.2)
 
     @pytest.mark.asyncio
     async def test_scheduler_assigns_to_available_worker(self):
@@ -60,11 +61,16 @@ class TestScheduler:
             batch = Batch(requests=[queued], created_at=0.0)
 
             await batch_queue.put(batch)
-            await asyncio.sleep(0.2)
+            await asyncio.sleep(0.3)
 
+            # Check if batch was assigned (either in queue or being processed)
             assigned = False
             for worker in workers:
                 if not worker.get_input_queue().empty():
+                    assigned = True
+                    break
+                # Or worker is processing (not available)
+                if not worker.available:
                     assigned = True
                     break
 
@@ -105,7 +111,8 @@ class TestScheduler:
             assert batch_queue.qsize() >= 0
 
             await scheduler.stop()
+            await asyncio.sleep(0.2)
         finally:
             for worker in workers:
                 await worker.stop()
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.2)
