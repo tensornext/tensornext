@@ -11,10 +11,18 @@ from typing import List, Optional
 import torch
 import uvicorn
 
-from server.scheduler import Scheduler
-from server.executor import Executor
-from server.telemetry import TelemetryCollector
-from server.models.simple_model import create_model
+# Support both relative imports (when run as module) and absolute imports (when run as script)
+try:
+    from .scheduler import Scheduler
+    from .executor import Executor
+    from .telemetry import TelemetryCollector
+    from .models.simple_model import create_model
+except ImportError:
+    # Fall back to absolute imports when running as standalone script
+    from scheduler import Scheduler
+    from executor import Executor
+    from telemetry import TelemetryCollector
+    from models.simple_model import create_model
 
 
 # Request/Response models
