@@ -6,12 +6,13 @@ logger = logging.getLogger(__name__)
 
 
 class ModelLoader:
-    def __init__(self) -> None:
+    def __init__(self, gpu_id: Optional[int] = None) -> None:
         self.model: Optional[Any] = None
         self.device: Optional[str] = None
+        self.gpu_id = gpu_id
 
     def load(self) -> None:
-        logger.info("Initializing model loader")
+        logger.info(f"Initializing model loader for GPU {self.gpu_id}")
         if settings.use_mock_model:
             logger.info("Using mock model mode (no GPU required)")
             self.model = None
@@ -19,26 +20,19 @@ class ModelLoader:
         else:
             logger.warning("Model loader is a placeholder - implement actual model loading")
             self.model = None
-            self.device = "cuda" if self._check_cuda() else "cpu"
-            if self.device == "cuda":
-                self._assert_single_gpu()
+            if self._check_cuda():
+                self.device = f"cuda:{self.gpu_id}" if self.gpu_id is not None else "cuda:0"
+            else:
+                self.device = "cpu"
         logger.info(f"Model loader initialized with device: {self.device}")
 
-    def _assert_single_gpu(self) -> None:
-        """Assert single-GPU usage for Step-1. Step-2 will support multi-GPU."""
+    @staticmethod
+    def get_gpu_count() -> int:
         try:
             import torch
-            gpu_count = torch.cuda.device_count()
-            if gpu_count > 1:
-                logger.warning(
-                    f"Multiple GPUs detected ({gpu_count}). "
-                    "Step-1 assumes single-GPU usage. "
-                    "Multi-GPU support will be added in Step-2."
-                )
-            elif gpu_count == 0:
-                logger.warning("No GPUs detected, falling back to CPU")
+            return torch.cuda.device_count()
         except ImportError:
-            pass
+            return 0
 
     def _check_cuda(self) -> bool:
         try:
@@ -50,7 +44,8 @@ class ModelLoader:
     def generate(self, prompt: str, max_tokens: int = 100, temperature: float = 0.7) -> str:
         if self.model is None:
             if settings.use_mock_model:
-                return f"[MOCK] Generated {max_tokens} tokens for: {prompt[:50]}..."
+                gpu_suffix = f" (GPU {self.gpu_id})" if self.gpu_id is not None else ""
+                return f"[MOCK{gpu_suffix}] Generated {max_tokens} tokens for: {prompt[:50]}..."
             return f"[PLACEHOLDER] Generated response for prompt: {prompt[:50]}..."
         return self.model.generate(prompt, max_tokens, temperature)
 
