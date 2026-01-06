@@ -34,7 +34,12 @@ class Scheduler:
     async def _schedule_loop(self) -> None:
         while self._running:
             try:
-                batch = await self._batch_queue.get()
+                try:
+                    batch = await asyncio.wait_for(
+                        self._batch_queue.get(), timeout=0.1
+                    )
+                except asyncio.TimeoutError:
+                    continue
                 worker = await self._find_available_worker()
                 if worker is None:
                     logger.warning("No available worker, requeuing batch")

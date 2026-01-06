@@ -55,7 +55,12 @@ class GPUWorker:
                 if self._input_queue is None:
                     await asyncio.sleep(0.1)
                     continue
-                batch = await self._input_queue.get()
+                try:
+                    batch = await asyncio.wait_for(
+                        self._input_queue.get(), timeout=0.1
+                    )
+                except asyncio.TimeoutError:
+                    continue
                 self._available = False
                 await self._process_batch(batch)
                 self._available = True

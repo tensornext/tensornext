@@ -18,84 +18,94 @@ class TestScheduler:
     @pytest.mark.asyncio
     async def test_scheduler_initialization(self):
         workers: list[GPUWorker] = []
-        for i in range(2):
-            loader = ModelLoader(gpu_id=i)
-            loader.load()
-            worker = GPUWorker(worker_id=i, gpu_id=i, model_loader=loader)
-            workers.append(worker)
-            await worker.start()
+        try:
+            for i in range(2):
+                loader = ModelLoader(gpu_id=i)
+                loader.load()
+                worker = GPUWorker(worker_id=i, gpu_id=i, model_loader=loader)
+                workers.append(worker)
+                await worker.start()
 
-        batch_queue = asyncio.Queue()
-        scheduler = Scheduler(workers=workers, batch_queue=batch_queue)
-        await scheduler.start()
+            batch_queue = asyncio.Queue()
+            scheduler = Scheduler(workers=workers, batch_queue=batch_queue)
+            await scheduler.start()
 
-        assert len(scheduler._workers) == 2
+            assert len(scheduler._workers) == 2
+            await asyncio.sleep(0.1)
 
-        await scheduler.stop()
-        for worker in workers:
-            await worker.stop()
+            await scheduler.stop()
+        finally:
+            for worker in workers:
+                await worker.stop()
+            await asyncio.sleep(0.1)
 
     @pytest.mark.asyncio
     async def test_scheduler_assigns_to_available_worker(self):
         workers: list[GPUWorker] = []
-        for i in range(2):
-            loader = ModelLoader(gpu_id=i)
-            loader.load()
-            worker = GPUWorker(worker_id=i, gpu_id=i, model_loader=loader)
-            workers.append(worker)
-            await worker.start()
+        try:
+            for i in range(2):
+                loader = ModelLoader(gpu_id=i)
+                loader.load()
+                worker = GPUWorker(worker_id=i, gpu_id=i, model_loader=loader)
+                workers.append(worker)
+                await worker.start()
 
-        batch_queue = asyncio.Queue()
-        scheduler = Scheduler(workers=workers, batch_queue=batch_queue)
-        await scheduler.start()
+            batch_queue = asyncio.Queue()
+            scheduler = Scheduler(workers=workers, batch_queue=batch_queue)
+            await scheduler.start()
 
-        request = InferenceRequest(prompt="test")
-        future = asyncio.Future()
-        queued = QueuedRequest(request=request, future=future, request_id="req0")
-        batch = Batch(requests=[queued], created_at=0.0)
+            request = InferenceRequest(prompt="test")
+            future = asyncio.Future()
+            queued = QueuedRequest(request=request, future=future, request_id="req0")
+            batch = Batch(requests=[queued], created_at=0.0)
 
-        await batch_queue.put(batch)
-        await asyncio.sleep(0.1)
+            await batch_queue.put(batch)
+            await asyncio.sleep(0.2)
 
-        assigned = False
-        for worker in workers:
-            if not worker.get_input_queue().empty():
-                assigned = True
-                break
+            assigned = False
+            for worker in workers:
+                if not worker.get_input_queue().empty():
+                    assigned = True
+                    break
 
-        assert assigned
+            assert assigned
 
-        await scheduler.stop()
-        for worker in workers:
-            await worker.stop()
+            await scheduler.stop()
+        finally:
+            for worker in workers:
+                await worker.stop()
+            await asyncio.sleep(0.1)
 
     @pytest.mark.asyncio
     async def test_scheduler_requeues_when_no_worker_available(self):
         workers: list[GPUWorker] = []
-        for i in range(1):
-            loader = ModelLoader(gpu_id=i)
-            loader.load()
-            worker = GPUWorker(worker_id=i, gpu_id=i, model_loader=loader)
-            workers.append(worker)
-            await worker.start()
+        try:
+            for i in range(1):
+                loader = ModelLoader(gpu_id=i)
+                loader.load()
+                worker = GPUWorker(worker_id=i, gpu_id=i, model_loader=loader)
+                workers.append(worker)
+                await worker.start()
 
-        batch_queue = asyncio.Queue()
-        scheduler = Scheduler(workers=workers, batch_queue=batch_queue)
-        await scheduler.start()
+            batch_queue = asyncio.Queue()
+            scheduler = Scheduler(workers=workers, batch_queue=batch_queue)
+            await scheduler.start()
 
-        request = InferenceRequest(prompt="test")
-        future = asyncio.Future()
-        queued = QueuedRequest(request=request, future=future, request_id="req0")
-        batch = Batch(requests=[queued], created_at=0.0)
+            request = InferenceRequest(prompt="test")
+            future = asyncio.Future()
+            queued = QueuedRequest(request=request, future=future, request_id="req0")
+            batch = Batch(requests=[queued], created_at=0.0)
 
-        worker = workers[0]
-        worker._available = False
+            worker = workers[0]
+            worker._available = False
 
-        await batch_queue.put(batch)
-        await asyncio.sleep(0.1)
+            await batch_queue.put(batch)
+            await asyncio.sleep(0.2)
 
-        assert batch_queue.qsize() >= 0
+            assert batch_queue.qsize() >= 0
 
-        await scheduler.stop()
-        for worker in workers:
-            await worker.stop()
+            await scheduler.stop()
+        finally:
+            for worker in workers:
+                await worker.stop()
+            await asyncio.sleep(0.1)

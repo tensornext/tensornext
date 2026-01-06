@@ -34,19 +34,21 @@ class TestDynamicBatcher:
             input_queue=input_queue,
             output_queue=output_queue,
         )
-        await batcher.start()
+        try:
+            await batcher.start()
 
-        for i in range(3):
-            request = InferenceRequest(prompt=f"test {i}")
-            future = asyncio.Future()
-            queued = QueuedRequest(request=request, future=future, request_id=f"req{i}")
-            await input_queue.put(queued)
+            for i in range(3):
+                request = InferenceRequest(prompt=f"test {i}")
+                future = asyncio.Future()
+                queued = QueuedRequest(request=request, future=future, request_id=f"req{i}")
+                await input_queue.put(queued)
 
-        await asyncio.sleep(0.1)
-        batch = await output_queue.get()
-        assert batch.size() == 3
-
-        await batcher.stop()
+            await asyncio.sleep(0.2)
+            batch = await asyncio.wait_for(output_queue.get(), timeout=1.0)
+            assert batch.size() == 3
+        finally:
+            await batcher.stop()
+            await asyncio.sleep(0.1)
 
     @pytest.mark.asyncio
     async def test_batcher_flushes_on_timeout(self):
@@ -58,18 +60,20 @@ class TestDynamicBatcher:
             input_queue=input_queue,
             output_queue=output_queue,
         )
-        await batcher.start()
+        try:
+            await batcher.start()
 
-        request = InferenceRequest(prompt="test")
-        future = asyncio.Future()
-        queued = QueuedRequest(request=request, future=future, request_id="req0")
-        await input_queue.put(queued)
+            request = InferenceRequest(prompt="test")
+            future = asyncio.Future()
+            queued = QueuedRequest(request=request, future=future, request_id="req0")
+            await input_queue.put(queued)
 
-        await asyncio.sleep(0.1)
-        batch = await output_queue.get()
-        assert batch.size() == 1
-
-        await batcher.stop()
+            await asyncio.sleep(0.15)
+            batch = await asyncio.wait_for(output_queue.get(), timeout=1.0)
+            assert batch.size() == 1
+        finally:
+            await batcher.stop()
+            await asyncio.sleep(0.1)
 
     @pytest.mark.asyncio
     async def test_batcher_handles_multiple_batches(self):
@@ -81,25 +85,31 @@ class TestDynamicBatcher:
             input_queue=input_queue,
             output_queue=output_queue,
         )
-        await batcher.start()
+        try:
+            await batcher.start()
 
-        for i in range(5):
-            request = InferenceRequest(prompt=f"test {i}")
-            future = asyncio.Future()
-            queued = QueuedRequest(request=request, future=future, request_id=f"req{i}")
-            await input_queue.put(queued)
+            for i in range(5):
+                request = InferenceRequest(prompt=f"test {i}")
+                future = asyncio.Future()
+                queued = QueuedRequest(request=request, future=future, request_id=f"req{i}")
+                await input_queue.put(queued)
 
-        await asyncio.sleep(0.1)
+            await asyncio.sleep(0.2)
 
-        batches: List[Batch] = []
-        while not output_queue.empty():
-            batches.append(await output_queue.get())
+            batches: List[Batch] = []
+            while not output_queue.empty():
+                try:
+                    batch = await asyncio.wait_for(output_queue.get(), timeout=0.5)
+                    batches.append(batch)
+                except asyncio.TimeoutError:
+                    break
 
-        assert len(batches) >= 2
-        total_requests = sum(b.size() for b in batches)
-        assert total_requests == 5
-
-        await batcher.stop()
+            assert len(batches) >= 2
+            total_requests = sum(b.size() for b in batches)
+            assert total_requests == 5
+        finally:
+            await batcher.stop()
+            await asyncio.sleep(0.1)
 
 
 class TestBatch:
