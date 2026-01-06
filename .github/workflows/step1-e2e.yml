@@ -21,11 +21,13 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
+        working-directory: ai-runtime
         run: |
           python -m pip install --upgrade pip
           pip install -e .
 
       - name: Start server in background
+        working-directory: ai-runtime
         env:
           USE_MOCK_MODEL: "true"
         run: |
@@ -45,6 +47,7 @@ jobs:
           exit 1
 
       - name: Run smoke test
+        working-directory: ai-runtime
         run: |
           python scripts/smoke_test.py
 
