@@ -61,26 +61,32 @@ class TestScheduler:
             batch = Batch(requests=[queued], created_at=0.0)
 
             await batch_queue.put(batch)
-            await asyncio.sleep(0.3)
+            await asyncio.sleep(0.1)  # Give scheduler time to pick up batch
+            
+            # Wait for batch to be processed (future will be completed)
+            try:
+                response = await asyncio.wait_for(future, timeout=2.0)
+                # If we get here, batch was assigned and processed
+                assert response.api_version == "v1"
+                assigned = True
+            except asyncio.TimeoutError:
+                # Check if batch is in worker queue or being processed
+                assigned = False
+                for worker in workers:
+                    if not worker.get_input_queue().empty():
+                        assigned = True
+                        break
+                    if not worker.available:
+                        assigned = True
+                        break
 
-            # Check if batch was assigned (either in queue or being processed)
-            assigned = False
-            for worker in workers:
-                if not worker.get_input_queue().empty():
-                    assigned = True
-                    break
-                # Or worker is processing (not available)
-                if not worker.available:
-                    assigned = True
-                    break
-
-            assert assigned
+            assert assigned, "Batch was not assigned to a worker"
 
             await scheduler.stop()
         finally:
             for worker in workers:
                 await worker.stop()
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.2)
 
     @pytest.mark.asyncio
     async def test_scheduler_requeues_when_no_worker_available(self):
