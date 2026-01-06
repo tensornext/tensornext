@@ -1,9 +1,9 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import Response
-from app.core.config import settings
-from app.core.logging import setup_logging, request_id_var
-from app.api import health, infer
+from server.app.core.config import settings
+from server.app.core.logging import setup_logging, request_id_var
+from server.app.api import health, infer
 import logging
 import uuid
 from typing import Callable, Awaitable
@@ -37,7 +37,7 @@ async def add_request_id(request: Request, call_next: Callable[[Request], Awaita
 @app.on_event("startup")
 async def startup_event() -> None:
     logger.info("Starting AI Runtime Server")
-    from app.models.loader import ModelLoader
+    from server.app.models.loader import ModelLoader
     loader = ModelLoader()
     loader.load()
     infer.model_loader = loader

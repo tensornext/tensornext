@@ -17,8 +17,7 @@ pip install -e .
 ## Running the Server
 
 ```bash
-cd server
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+uvicorn server.app.main:app --host 0.0.0.0 --port 8000
 ```
 
 Or using the Makefile:
@@ -48,4 +47,12 @@ Copy `.env.example` to `.env` and configure as needed.
 - `server/` - FastAPI server application
 - `client/` - Client SDK and CLI
 - `shared/` - Shared schemas and types
+
+## CI/CD
+
+GitHub Actions validates Step-1 end-to-end on every push and PR:
+- Server boots in mock mode (no GPU required)
+- Health and inference endpoints are tested
+- Client SDK integration is verified
+- Shared schema compatibility is checked
 

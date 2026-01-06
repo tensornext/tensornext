@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 from typing import Optional
+import os
 
 
 class Settings(BaseSettings):
@@ -9,10 +10,17 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     model_path: Optional[str] = None
     model_name: Optional[str] = None
+    use_mock_model: bool = False
 
     class Config:
         env_file = ".env"
         case_sensitive = False
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        use_mock = os.getenv("USE_MOCK_MODEL", "").lower()
+        if use_mock in ("true", "1", "yes"):
+            object.__setattr__(self, "use_mock_model", True)
 
 
 settings = Settings()

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
-from app.schemas.inference import InferenceRequest, InferenceResponse
-from app.models.loader import ModelLoader
-from app.core.logging import get_request_id
+from server.app.schemas.inference import InferenceRequest, InferenceResponse
+from server.app.models.loader import ModelLoader
+from server.app.core.logging import get_request_id
 import logging
 
 logger = logging.getLogger(__name__)
