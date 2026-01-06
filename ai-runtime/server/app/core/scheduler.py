@@ -28,7 +28,11 @@ class Scheduler:
     async def stop(self) -> None:
         self._running = False
         if self._task:
-            await self._task
+            self._task.cancel()
+            try:
+                await self._task
+            except asyncio.CancelledError:
+                pass
         logger.info("Scheduler stopped")
 
     async def _schedule_loop(self) -> None:

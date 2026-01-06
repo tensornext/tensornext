@@ -48,17 +48,26 @@ class DynamicBatcher:
         if self._current_batch and self._current_batch.size() > 0:
             await self._flush_batch()
         if self._task:
-            await self._task
+            self._task.cancel()
+            try:
+                await self._task
+            except asyncio.CancelledError:
+                pass
         logger.info("DynamicBatcher stopped")
 
     async def _batch_loop(self) -> None:
         while self._running:
             try:
                 if self._current_batch is None:
-                    queued = await self._input_queue.get()
-                    self._current_batch = Batch(
-                        requests=[queued], created_at=asyncio.get_event_loop().time()
-                    )
+                    try:
+                        queued = await asyncio.wait_for(
+                            self._input_queue.get(), timeout=0.1
+                        )
+                        self._current_batch = Batch(
+                            requests=[queued], created_at=asyncio.get_event_loop().time()
+                        )
+                    except asyncio.TimeoutError:
+                        continue
                 else:
                     try:
                         queued = await asyncio.wait_for(

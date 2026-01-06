@@ -34,7 +34,11 @@ class GPUWorker:
     async def stop(self) -> None:
         self._running = False
         if self._task:
-            await self._task
+            self._task.cancel()
+            try:
+                await self._task
+            except asyncio.CancelledError:
+                pass
         logger.info(f"GPUWorker {self._worker_id} stopped")
 
     @property
