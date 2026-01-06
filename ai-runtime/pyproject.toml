@@ -24,7 +24,7 @@ dev = [
 ]
 
 [tool.setuptools]
-packages = ["server.app", "client", "shared"]
+packages = {find = {}}
 
 [tool.setuptools.package-data]
 "*" = ["*.py"]
