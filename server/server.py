@@ -110,7 +110,7 @@ async def health_check():
     return info
 
 
-@app.post("/predict", response_model=InferenceResponse)
+@app.post("/predict", response_model=InferenceResponse, response_model_exclude_none=True)
 async def predict(request: InferenceRequest):
     """
     Main inference endpoint.
