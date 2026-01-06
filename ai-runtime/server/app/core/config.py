@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     batch_max_size: int = 8
     batch_max_latency_ms: int = 50
     max_in_flight_requests: int = 100
+    gateway_url: Optional[str] = None
+    node_id: Optional[str] = None
+    heartbeat_interval_sec: int = 5
+    node_max_capacity: int = 100
 
     class Config:
         env_file = ".env"
@@ -34,6 +38,18 @@ class Settings(BaseSettings):
         max_in_flight = os.getenv("MAX_IN_FLIGHT_REQUESTS")
         if max_in_flight:
             object.__setattr__(self, "max_in_flight_requests", int(max_in_flight))
+        gateway_url = os.getenv("GATEWAY_URL")
+        if gateway_url:
+            object.__setattr__(self, "gateway_url", gateway_url)
+        node_id = os.getenv("NODE_ID")
+        if node_id:
+            object.__setattr__(self, "node_id", node_id)
+        heartbeat = os.getenv("HEARTBEAT_INTERVAL_SEC")
+        if heartbeat:
+            object.__setattr__(self, "heartbeat_interval_sec", int(heartbeat))
+        capacity = os.getenv("NODE_MAX_CAPACITY")
+        if capacity:
+            object.__setattr__(self, "node_max_capacity", int(capacity))
 
 
 settings = Settings()

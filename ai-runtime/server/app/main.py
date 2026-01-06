@@ -39,12 +39,21 @@ async def startup_event() -> None:
     logger.info("Starting AI Runtime Server")
     from server.app.core.pipeline import pipeline
     await pipeline.initialize()
+    
+    from server.app.core.registry_client import registry_client
+    node_url = f"http://{settings.host}:{settings.port}"
+    registry_client.set_node_url(node_url)
+    await registry_client.register()
+    await registry_client.start_heartbeat()
+    
     logger.info("Server startup complete")
 
 
 @app.on_event("shutdown")
 async def shutdown_event() -> None:
     logger.info("Shutting down AI Runtime Server")
+    from server.app.core.registry_client import registry_client
+    await registry_client.shutdown()
     from server.app.core.pipeline import pipeline
     await pipeline.shutdown()
 
