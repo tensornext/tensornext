@@ -41,6 +41,7 @@ async def startup_event() -> None:
     loader = ModelLoader()
     loader.load()
     infer.model_loader = loader
+    infer.initialize_concurrency_limit()
     logger.info("Server startup complete")
 
 

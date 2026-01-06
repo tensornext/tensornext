@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     model_path: Optional[str] = None
     model_name: Optional[str] = None
     use_mock_model: bool = False
+    max_concurrent_requests: int = 2
 
     class Config:
         env_file = ".env"

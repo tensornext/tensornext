@@ -20,7 +20,25 @@ class ModelLoader:
             logger.warning("Model loader is a placeholder - implement actual model loading")
             self.model = None
             self.device = "cuda" if self._check_cuda() else "cpu"
+            if self.device == "cuda":
+                self._assert_single_gpu()
         logger.info(f"Model loader initialized with device: {self.device}")
+
+    def _assert_single_gpu(self) -> None:
+        """Assert single-GPU usage for Step-1. Step-2 will support multi-GPU."""
+        try:
+            import torch
+            gpu_count = torch.cuda.device_count()
+            if gpu_count > 1:
+                logger.warning(
+                    f"Multiple GPUs detected ({gpu_count}). "
+                    "Step-1 assumes single-GPU usage. "
+                    "Multi-GPU support will be added in Step-2."
+                )
+            elif gpu_count == 0:
+                logger.warning("No GPUs detected, falling back to CPU")
+        except ImportError:
+            pass
 
     def _check_cuda(self) -> bool:
         try:
