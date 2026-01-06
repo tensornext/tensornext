@@ -18,8 +18,8 @@ async def infer(request: InferenceRequest) -> InferenceResponse:
     try:
         text = model_loader.generate(
             prompt=request.prompt,
-            max_tokens=request.max_tokens or 100,
-            temperature=request.temperature or 0.7,
+            max_tokens=request.max_tokens if request.max_tokens is not None else 100,
+            temperature=request.temperature if request.temperature is not None else 0.7,
         )
         logger.info(f"Inference completed: response_length={len(text)}")
         return InferenceResponse(text=text, request_id=request_id)
