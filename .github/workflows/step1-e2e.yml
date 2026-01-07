@@ -33,6 +33,17 @@ jobs:
         run: |
           pytest server/tests/test_batcher.py server/tests/test_scheduler.py server/tests/test_queue.py server/tests/test_concurrency.py -v
 
+      - name: Run Step-4 gateway tests
+        working-directory: ai-runtime
+        env:
+          ENABLE_STREAMING: "true"
+          API_KEYS: "tenant1:test-key-1,tenant2:test-key-2"
+          TENANT_RATE_LIMIT: "100"
+          GATEWAY_TIMEOUT_MS: "30000"
+          MAX_RETRIES: "1"
+        run: |
+          pytest gateway/tests/test_streaming.py gateway/tests/test_rate_limiting.py gateway/tests/test_auth.py gateway/tests/test_failures.py -v
+
       - name: Start server in background
         working-directory: ai-runtime
         env:

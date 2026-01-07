@@ -1,13 +1,13 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.responses import Response
 from gateway.app.core.config import settings
 from gateway.app.core.registry import registry
-from gateway.app.api import health, infer, register
+from gateway.app.core.observability import ObservabilityMiddleware
+from gateway.app.core.auth import TenantAuthMiddleware
+from gateway.app.core.rate_limit import RateLimitMiddleware
+from gateway.app.api import health, infer, register, metrics
 import logging
 import sys
-import uuid
-from typing import Callable, Awaitable
 
 logging.basicConfig(
     level=settings.log_level,
@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title=settings.app_name)
 
+# CORS middleware (outermost)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -27,24 +28,30 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Step-4 middleware (order matters: observability -> auth -> rate_limit)
+app.add_middleware(ObservabilityMiddleware)
+app.add_middleware(
+    TenantAuthMiddleware,
+    api_key_map=settings.get_api_key_map(),
+)
+app.add_middleware(
+    RateLimitMiddleware,
+    limit_per_minute=settings.tenant_rate_limit,
+)
+
 app.include_router(health.router)
 app.include_router(infer.router)
 app.include_router(register.router)
-
-
-@app.middleware("http")
-async def add_request_id(
-    request: Request, call_next: Callable[[Request], Awaitable[Response]]
-) -> Response:
-    request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
-    response = await call_next(request)
-    response.headers["X-Request-ID"] = request_id
-    return response
+app.include_router(metrics.router)
 
 
 @app.on_event("startup")
 async def startup_event() -> None:
     logger.info("Starting AI Runtime Gateway")
+    logger.info(f"Streaming enabled: {settings.enable_streaming}")
+    logger.info(f"Rate limit: {settings.tenant_rate_limit} req/min")
+    logger.info(f"Gateway timeout: {settings.gateway_timeout_ms}ms")
+    logger.info(f"Max retries: {settings.max_retries}")
     await registry.start()
     logger.info("Gateway startup complete")
 
