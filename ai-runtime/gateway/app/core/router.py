@@ -1,6 +1,7 @@
 import logging
 from typing import Optional
 from gateway.app.core.registry import NodeRegistry, NodeInfo, registry
+from gateway.app.core.circuit_breaker import circuit_breaker
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +19,10 @@ class Router:
         best_capacity = -1
 
         for node in nodes:
+            # Skip nodes with open circuit breakers
+            if not circuit_breaker.is_available(node.node_id):
+                continue
+                
             capacity = node.get_available_capacity()
             if capacity > best_capacity:
                 best_capacity = capacity
